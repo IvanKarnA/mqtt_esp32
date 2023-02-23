@@ -51,45 +51,31 @@ void MQTTcallback(char* topic, byte* payload, unsigned int length)
   
 }
 
+void setupTopics(){
+    subscribe("esp/test",TopicOut);
+}
+
 void TopicOut(String s){
   Serial.println(s);
 }
 
-
-void Topic2Out(String s){
-  Serial.println("msg from test1:");
-  Serial.println(s);
-}
 
 
 void setup() 
 {
   Serial.begin(115200);
   WifiConnect();
-  MQTTSetup();
-  subscribe("esp/test",TopicOut);
-  subscribe("esp/test1",Topic2Out);
+  xTaskCreate(MQTTClientTask,"MQTTTask",3*1024,NULL,1,NULL);
+  
 }
 
 
 void loop(){
-client.loop();
-delay(100);
 }
 
 
-
-void WifiConnect(){
-WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) 
-  {
-    delay(500);
-    Serial.println("Connecting to WiFi..");
-  }
-  Serial.println(WiFi.SSID());
-}
-void MQTTSetup(){
-client.setServer(mqtt_server, mqtt_port);
+void MQTTClientTask(void* pvParameters){
+    client.setServer(mqtt_server, mqtt_port);
   client.setCallback(MQTTcallback);
   while (!client.connected()) 
   {
@@ -102,7 +88,43 @@ client.setServer(mqtt_server, mqtt_port);
     {
       Serial.print("failed with state ");
       Serial.println(client.state());
-      
+      vTaskDelay(1000);
     }
   }
+  setupTopics();
+  while (1)
+  {
+    if (WiFi.status() != WL_CONNECTED)
+    {
+        Serial.println("WIFI not connected");
+        vTaskDelay(3000);
+    }
+    else{
+        if (client.connected())
+        {
+            client.loop();
+            vTaskDelay(100);
+        }
+        else{
+            Serial.println("MQTT not connected");
+            vTaskDelay(1000);
+        }
+    }
+    
+    
+  }
+  
+    
 }
+
+//Ниже точно все нормально
+void WifiConnect(){
+WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) 
+  {
+    delay(500);
+    Serial.println("Connecting to WiFi..");
+  }
+  Serial.println(WiFi.SSID());
+}
+
