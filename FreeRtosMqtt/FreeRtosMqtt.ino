@@ -66,7 +66,7 @@ void setup()
   Serial.begin(115200);
   WifiConnect();
   xTaskCreate(MQTTClientTask,"MQTTTask",3*1024,NULL,1,NULL);
-  vTaskStartScheduler();
+  
   // client.publish("esp/test","123");
 }
 
